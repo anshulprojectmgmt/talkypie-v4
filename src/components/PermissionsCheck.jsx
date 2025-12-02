@@ -137,6 +137,45 @@ const PermissionsCheck = () => {
 ).toString();
 
     
+    // If assistant=livekit was requested, POST profile to backend then redirect
+    // to the LiveKit frontend so it can auto-start after permissions.
+    const assistant = queryParams.get('assistant');
+    if (assistant === 'livekit') {
+      // Map Talkypie fields to LiveKit backend keys
+      const backendPayload = {
+        name: childName || undefined,
+        age: age || undefined,
+        gender: gender || undefined,
+        likes: interests || undefined,
+        learning: currentLearning || undefined,
+      };
+
+      (async () => {
+        try {
+          await fetch('http://localhost:8080/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(backendPayload),
+          });
+        } catch (e) {
+          console.warn('Failed to POST profile to LiveKit backend', e);
+        } finally {
+          // Redirect to LiveKit frontend with profile in query params so it can auto-start
+          const params2 = new URLSearchParams();
+          params2.set('autoStart', 'true');
+          if (backendPayload.name) params2.set('name', backendPayload.name);
+          if (backendPayload.age) params2.set('age', String(backendPayload.age));
+          if (backendPayload.gender) params2.set('gender', backendPayload.gender);
+          if (backendPayload.likes) params2.set('likes', backendPayload.likes);
+          if (backendPayload.learning) params2.set('learning', backendPayload.learning);
+
+          window.location.href = `http://localhost:3000/?${params2.toString()}`;
+        }
+      })();
+
+      return;
+    }
+
     navigate(`/vapi?${params.toString()}`);
   };
 

@@ -56,12 +56,30 @@ export default function StartTalkypie() {
 ).toString();
 
     
-    if(selectedAssistant === "deepgram+vapi") {
-      navigate("/deepgram");
-    } else if(selectedAssistant === "livekit") {
-      navigate("/livekit");
-    } else if (selectedAssistant === "vapi with custom transcript") {
-      navigate(`/permissions?${queryParams}&customTranscript=true`); 
+    // For LiveKit we first go through the permissions flow (so user grants mic/BLE access)
+    // The permissions page will perform the POST to backend and redirect to the LiveKit UI.
+    const proceedToLivekit = () => {
+      const params = new URLSearchParams({
+        ...formData,
+        porcupineKey: localStorage.getItem('porcupineKey') || '',
+        vapiKey: localStorage.getItem('vapiKey') || '',
+        vapiPublicKey: localStorage.getItem('vapiPublicKey') || '',
+        prompt: localStorage.getItem('customPrompt') || '',
+        toyName: localStorage.getItem('toyName') || 'Talkypie',
+        isFormSubmitted: 'true',
+        assistant: 'livekit',
+      });
+
+      navigate(`/permissions?${params.toString()}`);
+    };
+
+    if (selectedAssistant === 'deepgram+vapi') {
+      navigate('/deepgram');
+    } else if (selectedAssistant === 'livekit') {
+      // send profile to livekit backend then open livekit UI
+      proceedToLivekit();
+    } else if (selectedAssistant === 'vapi with custom transcript') {
+      navigate(`/permissions?${queryParams}&customTranscript=true`);
     } else {
       navigate(`/permissions?${queryParams}&customTranscript=false`);
     }

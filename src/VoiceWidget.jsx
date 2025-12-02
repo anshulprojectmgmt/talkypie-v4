@@ -66,6 +66,8 @@ const VoiceWidget = () => {
   const [interests, setInterests] = useState(
     queryParams.get("interests") || ""
   );
+  const [age, setAge] = useState(queryParams.get("age") || ""); //new
+  const [gender, setGender] = useState(queryParams.get("gender") || "");//new
   const [currentLearning, setCurrentLearning] = useState(
     queryParams.get("currentLearning") || ""
   );
@@ -248,9 +250,12 @@ const VoiceWidget = () => {
       // http://localhost:5000
       // https://https://talkypie-vapi-backend.onrender.com/vapi/create-assistant
       const response = await axios.post(
-        "https://talkypie-vapi-backend.vercel.app/vapi/create-assistant",
+        "http://localhost:5000/vapi/create-assistant",
+       // http://guidable-axton-forky.ngrok-free.dev
         {
           childName,
+          age,
+          gender,
           customPrompt,
           vapiKey: vapiPrivateKey,
           prompt,
@@ -605,7 +610,7 @@ const VoiceWidget = () => {
   useEffect(() => {
     if (!isFormSubmitted) return;
 
-    const socket = new WebSocket("ws://localhost:8080");
+    const socket = new WebSocket("wss://http://guidable-axton-forky.ngrok-free.dev/api/custom-transcriber");
 
     socket.onopen = () => {
       console.log("Connected to backend WebSocket");
@@ -660,7 +665,37 @@ const VoiceWidget = () => {
       vapi.on("speech-end", () => {
         sendBlinkCommand();
       });
+      //new
+      // Listen for transcript messages from Vapi so we can detect farewell phrases
+      const farewellHandler = (message) => {
+        try {
+          if (message?.type === "transcript") {
+            const text = (message.transcript || "").toLowerCase();
+            const isUser = message.role === "user" || message.role === "speaker" || message.role === 0;
+            if (!isUser) return;
 
+            const farewells = ["bye bye", "goodbye", "bye", "see you", "see ya"]; 
+            if (farewells.some((f) => text.includes(f))) {
+              console.log("Farewell detected in transcript, ending call:", text);
+              // Prevent double-invokes by checking the ref
+              if (isAssistantOnRef.current) {
+                // Use toggleAssistant which performs the proper shutdown sequence
+                toggleAssistant();
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error in farewellHandler:", e);
+        }
+      };
+
+      // Register handler if supported by the SDK
+      try {
+        vapi.on("message", farewellHandler);
+      } catch (e) {
+        console.warn("Vapi does not support message events or registering failed:", e);
+      }
+      //new
       // when the assistant ended the call implicitly, we have to manually perform end call operations
       vapi.once("call-end", () => {
         console.log(
@@ -670,6 +705,17 @@ const VoiceWidget = () => {
           isAssistantOnRef.current
         );
 
+        //new
+        // Try to remove the message handler if SDK supports removal
+        try {
+          if (typeof vapi.off === "function") {
+           
+            vapi.off("message");
+          }
+        } catch (e) {
+          console.warn("Failed to remove message listener on call-end:", e);
+        }
+        //new
         if (isAssistantOn || isAssistantOnRef.current) {
           // resetInactivityTimer();
           toggleAssistant(); // Call toggleAssistant to handle end call processing
