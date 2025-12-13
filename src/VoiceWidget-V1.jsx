@@ -31,26 +31,21 @@ const VoiceWidget = () => {
 
   // Microphone mute state
   const [isMicMuted, setIsMicMuted] = useState(false);
-
+ 
   // Toggle microphone mute/unmute
   const toggleMicrophone = () => {
+    
+
     // Vapi SDK mute/unmute logic
-    if (
-      typeof vapi !== "undefined" &&
-      vapi &&
-      typeof vapi.setMuted === "function"
-    ) {
+    if (typeof vapi !== 'undefined' && vapi && typeof vapi.setMuted === 'function') {
       vapi.setMuted(!isMicMuted);
-      setIsMicMuted((prev) => !prev);
-      console.log(
-        !isMicMuted ? "Microphone muted (Vapi)" : "Microphone unmuted (Vapi)"
-      );
+      setIsMicMuted(prev => !prev);
+      console.log(!isMicMuted ? "Microphone muted (Vapi)" : "Microphone unmuted (Vapi)");
     } else {
       // fallback: globally mute all active microphone streams`
-      console.warn(
-        "Vapi instance not available, falling back to global mic mute."
-      );
+      console.warn("Vapi instance not available, falling back to global mic mute.");
     }
+      
   };
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
@@ -72,7 +67,7 @@ const VoiceWidget = () => {
     queryParams.get("interests") || ""
   );
   const [age, setAge] = useState(queryParams.get("age") || ""); //new
-  const [gender, setGender] = useState(queryParams.get("gender") || ""); //new
+  const [gender, setGender] = useState(queryParams.get("gender") || "");//new
   const [currentLearning, setCurrentLearning] = useState(
     queryParams.get("currentLearning") || ""
   );
@@ -105,9 +100,6 @@ const VoiceWidget = () => {
   const deepgramSocketRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const mediaStreamRef = useRef(null);
-  const assistantSpeakingRef = useRef(false);
-  const userSpeakingRef = useRef(false);
-  const userSilenceTimerRef = useRef(null);
 
   const DEEPGRAM_API_KEY = "2434d902a6a617075faae7044e92fca628228f9a";
 
@@ -248,19 +240,18 @@ const VoiceWidget = () => {
 
       let customPrompt = ``;
       if (interests) {
-        customPrompt += "Child's Interests & Preferences: ${interests}\n";
+        customPrompt += `Child's Interests & Preferences: ${interests}\n`;
       }
       if (currentLearning) {
-        customPrompt += " Current Learning in School: ${currentLearning}\n";
+        customPrompt += `Current Learning in School: ${currentLearning}\n`;
       }
 
       // https://api-talkypies.vercel.app
       // http://localhost:5000
       // https://https://talkypie-vapi-backend.onrender.com/vapi/create-assistant
       const response = await axios.post(
-        "https://talkypie-backend-v3.onrender.com/vapi/create-assistant",
-        // "http://localhost:5000/vapi/create-assistant",
-        // http://guidable-axton-forky.ngrok-free.dev
+        "http://localhost:5000/vapi/create-assistant",
+       // http://guidable-axton-forky.ngrok-free.dev
         {
           childName,
           age,
@@ -384,58 +375,6 @@ const VoiceWidget = () => {
     }, 1000);
   };
 
-  // Attempt to halt assistant audio mid-response when the user starts speaking
-  const interruptAssistantResponse = () => {
-    if (!vapi) return;
-
-    try {
-      if (typeof vapi.interrupt === "function") {
-        vapi.interrupt();
-        console.log("Vapi interrupt invoked due to user speech.");
-        return;
-      }
-
-      if (typeof vapi.pause === "function") {
-        vapi.pause();
-        console.log("Vapi pause invoked due to user speech.");
-        return;
-      }
-
-      // Fallback: try muting output quickly if no explicit interrupt API exists
-      if (typeof vapi.setMuted === "function") {
-        vapi.setMuted(true);
-        console.log("Vapi muted as a fallback during user speech.");
-        setTimeout(() => {
-          if (userSpeakingRef.current) return;
-          vapi.setMuted(false);
-          console.log("Vapi unmuted after fallback mute.");
-        }, 1200);
-      }
-    } catch (e) {
-      console.warn("Failed to interrupt assistant response:", e);
-    }
-  };
-
-  const markUserSpeaking = () => {
-    userSpeakingRef.current = true;
-    if (userSilenceTimerRef.current) {
-      clearTimeout(userSilenceTimerRef.current);
-    }
-
-    // Assume user stops speaking if no transcript arrives for a short window
-    userSilenceTimerRef.current = setTimeout(() => {
-      userSpeakingRef.current = false;
-      if (typeof vapi?.resume === "function") {
-        try {
-          vapi.resume();
-          console.log("Vapi resumed after user silence.");
-        } catch (e) {
-          console.warn("Failed to resume Vapi after silence:", e);
-        }
-      }
-    }, 1200);
-  };
-
   useEffect(() => {
     if (isFormSubmitted && assistantStatus === "created") {
       init(porcupineKey, porcupineKeyword, porcupineModel)
@@ -448,6 +387,8 @@ const VoiceWidget = () => {
     }
     return () => release();
   }, [init, start, release, isFormSubmitted, porcupineKey, assistantStatus]);
+
+
 
   // new setup for deepgram and wake word
 
@@ -502,7 +443,7 @@ const VoiceWidget = () => {
 
         // Create WebSocket
         const socket = new WebSocket(
-          "wss://api.deepgram.com/v1/listen?punctuate=true&language=en",
+          `wss://api.deepgram.com/v1/listen?punctuate=true&language=en`,
           ["token", DEEPGRAM_API_KEY]
         );
         deepgramSocketRef.current = socket;
@@ -515,9 +456,7 @@ const VoiceWidget = () => {
             //   });
             //   setStream(userStream);
             // }
-            const stream = await navigator.mediaDevices.getUserMedia({
-              audio: true,
-            });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaStreamRef.current = stream;
 
             const recorder = new MediaRecorder(stream, {
@@ -528,7 +467,7 @@ const VoiceWidget = () => {
             recorder.ondataavailable = (e) =>
               e.data.size > 0 && socket.readyState === 1 && socket.send(e.data);
             recorder.start(250);
-            console.log("🎙 Deepgram listening...");
+            console.log("🎙️ Deepgram listening...");
           } catch (err) {
             console.error("Mic error:", err);
             setErrorMessage("Microphone error: " + err.message);
@@ -671,9 +610,7 @@ const VoiceWidget = () => {
   useEffect(() => {
     if (!isFormSubmitted) return;
 
-    const socket = new WebSocket(
-      "wss://talkypie-backend-v3.onrender.com/api/custom-transcriber"
-    );
+    const socket = new WebSocket("wss://http://guidable-axton-forky.ngrok-free.dev/api/custom-transcriber");
 
     socket.onopen = () => {
       console.log("Connected to backend WebSocket");
@@ -722,12 +659,10 @@ const VoiceWidget = () => {
       // For listening assistants talking and listning states
 
       vapi.on("speech-start", () => {
-        assistantSpeakingRef.current = true;
         sendOnCommand();
       });
 
       vapi.on("speech-end", () => {
-        assistantSpeakingRef.current = false;
         sendBlinkCommand();
       });
       //new
@@ -736,30 +671,12 @@ const VoiceWidget = () => {
         try {
           if (message?.type === "transcript") {
             const text = (message.transcript || "").toLowerCase();
-            const isUser =
-              message.role === "user" ||
-              message.role === "speaker" ||
-              message.role === 0;
-            if (isUser) {
-              markUserSpeaking();
-              if (assistantSpeakingRef.current) {
-                interruptAssistantResponse();
-              }
-            }
+            const isUser = message.role === "user" || message.role === "speaker" || message.role === 0;
             if (!isUser) return;
 
-            const farewells = [
-              "bye bye",
-              "goodbye",
-              "bye",
-              "see you",
-              "see ya",
-            ];
+            const farewells = ["bye bye", "goodbye", "bye", "see you", "see ya"]; 
             if (farewells.some((f) => text.includes(f))) {
-              console.log(
-                "Farewell detected in transcript, ending call:",
-                text
-              );
+              console.log("Farewell detected in transcript, ending call:", text);
               // Prevent double-invokes by checking the ref
               if (isAssistantOnRef.current) {
                 // Use toggleAssistant which performs the proper shutdown sequence
@@ -776,10 +693,7 @@ const VoiceWidget = () => {
       try {
         vapi.on("message", farewellHandler);
       } catch (e) {
-        console.warn(
-          "Vapi does not support message events or registering failed:",
-          e
-        );
+        console.warn("Vapi does not support message events or registering failed:", e);
       }
       //new
       // when the assistant ended the call implicitly, we have to manually perform end call operations
@@ -795,6 +709,7 @@ const VoiceWidget = () => {
         // Try to remove the message handler if SDK supports removal
         try {
           if (typeof vapi.off === "function") {
+           
             vapi.off("message");
           }
         } catch (e) {
@@ -850,10 +765,6 @@ const VoiceWidget = () => {
         );
         toggleAssistant(); // Ensure assistant is turned off}
       }
-
-      if (userSilenceTimerRef.current) {
-        clearTimeout(userSilenceTimerRef.current);
-      }
     };
   }, []);
 
@@ -863,12 +774,12 @@ const VoiceWidget = () => {
 
     if (isAssistantOnRef.current) {
       setIsLoading(true);
-      vapi.setMuted(false);
+       vapi.setMuted(false);
       setIsMicMuted(false);
       vapi.stop();
       setIsAssistantOn(false);
       isAssistantOnRef.current = false;
-
+      
       await endCallProcessing();
       console.log("call disconnected");
 
@@ -1083,32 +994,33 @@ const VoiceWidget = () => {
                   <FiPhoneCall className="w-8 h-8 animate-pulse" />
                 )}
               </button>
-              {isAssistantOn && (
+              {isAssistantOn &&  (
                 <button
-                  onClick={toggleMicrophone}
-                  className={`rounded-full p-4 shadow-lg transition-transform duration-300 ease-in-out ${
-                    !stream
-                      ? "bg-gray-400 text-gray-200 cursor-not-allowed"
-                      : isMicMuted
-                      ? "bg-red-600 text-white hover:bg-red-700"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
-                  }`}
-                  disabled={!stream}
-                  title={
-                    !stream
-                      ? "Microphone unavailable"
-                      : isMicMuted
-                      ? "Unmute Microphone"
-                      : "Mute Microphone"
-                  }
-                >
-                  {isMicMuted ? (
-                    <FiMicOff className="w-8 h-8" />
-                  ) : (
-                    <FiMic className="w-8 h-8" />
-                  )}
-                </button>
+                onClick={toggleMicrophone}
+                className={`rounded-full p-4 shadow-lg transition-transform duration-300 ease-in-out ${
+                  !stream
+                    ? "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    : isMicMuted
+                    ? "bg-red-600 text-white hover:bg-red-700"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+                disabled={!stream}
+                title={
+                  !stream
+                    ? "Microphone unavailable"
+                    : isMicMuted
+                    ? "Unmute Microphone"
+                    : "Mute Microphone"
+                }
+              >
+                {isMicMuted ? (
+                  <FiMicOff className="w-8 h-8" />
+                ) : (
+                  <FiMic className="w-8 h-8" />
+                )}
+              </button>
               )}
+              
             </div>
           </div>
         </div>

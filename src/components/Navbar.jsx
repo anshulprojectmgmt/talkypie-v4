@@ -1,10 +1,21 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FaMicrophoneAlt, FaBars, FaTimes } from 'react-icons/fa';
-import { MdDashboard, MdMonitor, MdSettings } from 'react-icons/md';
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { FaMicrophoneAlt, FaBars, FaTimes } from "react-icons/fa";
+import { MdDashboard, MdMonitor, MdSettings } from "react-icons/md";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // Refresh the page when the browser back button is used, after navigating back.
+  useEffect(() => {
+    const handlePopState = () => {
+      // Browser already moved to previous entry; force a reload to refresh that page.
+      window.location.reload();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   return (
     <nav className="bg-white shadow-lg">
@@ -22,6 +33,15 @@ const Navbar = () => {
             <Link
               to="/start"
               className="flex items-center gap-2 px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
+              onClick={(e) => {
+                // Always navigate to /start with a full page load (not SPA navigation)
+                e.preventDefault();
+                try {
+                  window.location.assign("/start");
+                } catch (err) {
+                  window.location.href = "/start";
+                }
+              }}
             >
               <MdDashboard className="text-xl" />
               <span>Parent Talkypie app</span>
