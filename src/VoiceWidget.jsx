@@ -337,11 +337,11 @@ const VoiceWidget = () => {
   };
 
   // step-2 start the assistant when created
-  useEffect(() => {
-    if (assistantId && assistantStatus === "created") {
-      toggleAssistant(); // Start the assistant if it was created successfully
-    }
-  }, [assistantId, assistantStatus]);
+  // useEffect(() => {
+  //   if (assistantId && assistantStatus === "created") {
+  //     toggleAssistant(); // Start the assistant if it was created successfully
+  //   }
+  // }, [assistantId, assistantStatus]);
 
   // Auto-create assistant when component mounts
   useEffect(() => {
