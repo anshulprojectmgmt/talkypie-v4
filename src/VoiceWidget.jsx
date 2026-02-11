@@ -97,6 +97,7 @@ const VoiceWidget = () => {
   const [isCreatingAssistant, setIsCreatingAssistant] = useState(false);
   const [assistantError, setAssistantError] = useState("");
   const [finalPrompt, setFinalPrompt] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const isAssistantOnRef = useRef(isAssistantOn);
   const inactivityTimeoutRef = useRef(null);
@@ -1051,7 +1052,7 @@ const VoiceWidget = () => {
                   isListening ? "text-green-600" : "text-red-600"
                 }`}
               >
-                {isListening ? "Active" : "Inactive"}
+                {isAssistantOn || isListening ? "Active" : "Inactive"}
               </span>
             </p>
             <p className="text-gray-700">
