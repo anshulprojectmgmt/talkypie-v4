@@ -43,12 +43,12 @@ const VoiceWidget = () => {
       vapi.setMuted(!isMicMuted);
       setIsMicMuted((prev) => !prev);
       console.log(
-        !isMicMuted ? "Microphone muted (Vapi)" : "Microphone unmuted (Vapi)"
+        !isMicMuted ? "Microphone muted (Vapi)" : "Microphone unmuted (Vapi)",
       );
     } else {
       // fallback: globally mute all active microphone streams`
       console.warn(
-        "Vapi instance not available, falling back to global mic mute."
+        "Vapi instance not available, falling back to global mic mute.",
       );
     }
   };
@@ -66,25 +66,25 @@ const VoiceWidget = () => {
   const [isAssistantOn, setIsAssistantOn] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [childName, setChildName] = useState(
-    queryParams.get("childName") || ""
+    queryParams.get("childName") || "",
   );
   const [interests, setInterests] = useState(
-    queryParams.get("interests") || ""
+    queryParams.get("interests") || "",
   );
   const [age, setAge] = useState(queryParams.get("age") || ""); //new
   const [gender, setGender] = useState(queryParams.get("gender") || ""); //new
   const [currentLearning, setCurrentLearning] = useState(
-    queryParams.get("currentLearning") || ""
+    queryParams.get("currentLearning") || "",
   );
   const [prompt, setPrompt] = useState(queryParams.get("prompt") || "");
   const [porcupineKey, setPorcupineKey] = useState(
-    queryParams.get("porcupineKey") || ""
+    queryParams.get("porcupineKey") || "",
   );
   const [toyName, setToyName] = useState(
-    queryParams.get("toyName") || "Talkypie"
+    queryParams.get("toyName") || "Talkypie",
   );
   const [isFormSubmitted, setIsFormSubmitted] = useState(
-    queryParams.get("isFormSubmitted") === "true"
+    queryParams.get("isFormSubmitted") === "true",
   );
   const customTranscript = queryParams.get("customTranscript") === "true";
 
@@ -146,18 +146,39 @@ const VoiceWidget = () => {
     isAssistantOnRef.current = isAssistantOn;
   }, [isAssistantOn]);
 
+  //To get the assistant id on disconnect form the local storage
+  useEffect(() => {
+    const savedId = localStorage.getItem("assistantId");
+
+    if (savedId) {
+      console.log("Restoring assistantId:", savedId);
+      setAssistantId(savedId);
+      setAssistantStatus("created");
+    }
+  }, []);
+
   // Setup ESP32 characteristic and event listener
   useEffect(() => {
     if (espCharacteristic) {
       console.log("ESP32 characteristic available, setting up event listener");
 
       // Add event listener for ESP32 characteristic value changes
-      const handleCharacteristicValueChanged = (event) => {
+      const handleCharacteristicValueChanged = async (event) => {
         const value = new TextDecoder().decode(event.target.value);
         console.log("Received from ESP:", value);
+        // if (value === "SUPPORT") {
+        //   console.log("ESP32 SUPPORT signal received, toggling assistant");
+        //   toggleAssistant();
+        // }
         if (value === "SUPPORT") {
-          console.log("ESP32 SUPPORT signal received, toggling assistant");
-          toggleAssistant();
+          console.log("Hardware button pressed");
+
+          if (!assistantId) {
+            console.log("Assistant not created. Creating...");
+            await createAssistant();
+          } else {
+            toggleAssistant();
+          }
         }
       };
 
@@ -167,7 +188,7 @@ const VoiceWidget = () => {
         .then(() => {
           espCharacteristic.addEventListener(
             "characteristicvaluechanged",
-            handleCharacteristicValueChanged
+            handleCharacteristicValueChanged,
           );
           console.log("ESP32 characteristic event listener added");
         })
@@ -180,7 +201,7 @@ const VoiceWidget = () => {
         if (espCharacteristic) {
           espCharacteristic.removeEventListener(
             "characteristicvaluechanged",
-            handleCharacteristicValueChanged
+            handleCharacteristicValueChanged,
           );
           console.log("ESP32 characteristic event listener removed");
         }
@@ -270,7 +291,7 @@ const VoiceWidget = () => {
           prompt,
           toyName,
           customTranscript,
-        }
+        },
       );
 
       console.log("Assistant created:", response);
@@ -503,7 +524,7 @@ const VoiceWidget = () => {
         // Create WebSocket
         const socket = new WebSocket(
           "wss://api.deepgram.com/v1/listen?punctuate=true&language=en",
-          ["token", DEEPGRAM_API_KEY]
+          ["token", DEEPGRAM_API_KEY],
         );
         deepgramSocketRef.current = socket;
 
@@ -540,7 +561,7 @@ const VoiceWidget = () => {
 
           const transcript =
             JSON.parse(
-              data
+              data,
             )?.channel?.alternatives?.[0]?.transcript?.toLowerCase();
           const triggers = [
             "help me",
@@ -672,7 +693,7 @@ const VoiceWidget = () => {
     if (!isFormSubmitted) return;
 
     const socket = new WebSocket(
-      "wss://talkypie-backend-v3.onrender.com/api/custom-transcriber"
+      "wss://talkypie-backend-v3.onrender.com/api/custom-transcriber",
     );
 
     socket.onopen = () => {
@@ -758,7 +779,7 @@ const VoiceWidget = () => {
             if (farewells.some((f) => text.includes(f))) {
               console.log(
                 "Farewell detected in transcript, ending call:",
-                text
+                text,
               );
               // Prevent double-invokes by checking the ref
               if (isAssistantOnRef.current) {
@@ -778,7 +799,7 @@ const VoiceWidget = () => {
       } catch (e) {
         console.warn(
           "Vapi does not support message events or registering failed:",
-          e
+          e,
         );
       }
       //new
@@ -788,7 +809,7 @@ const VoiceWidget = () => {
           "Call ended event received",
           isAssistantOn,
           "  ",
-          isAssistantOnRef.current
+          isAssistantOnRef.current,
         );
 
         //new
@@ -842,11 +863,11 @@ const VoiceWidget = () => {
         "Cleaning up on unmount, stopping Vapi and sending off command: ",
         isAssistantOnRef.current,
         "|| ",
-        isAssistantOn
+        isAssistantOn,
       );
       if (isAssistantOnRef.current) {
         console.log(
-          "Cleaning up on unmount, stopping Vapi and sending off command"
+          "Cleaning up on unmount, stopping Vapi and sending off command",
         );
         toggleAssistant(); // Ensure assistant is turned off}
       }
@@ -860,6 +881,12 @@ const VoiceWidget = () => {
   // step-3 toggle assistant on/off
   const toggleAssistant = async () => {
     // console.log("assistant status from ref: inside ", isAssistantOnRef.current);
+    // 🔒 Prevent reconnect if ID missing
+    if (!assistantId && !isAssistantOnRef.current) {
+      console.warn("Assistant ID missing. Creating assistant...");
+      await createAssistant();
+      return;
+    }
 
     if (isAssistantOnRef.current) {
       setIsLoading(true);
@@ -1069,8 +1096,8 @@ const VoiceWidget = () => {
                   isAssistantOn
                     ? "bg-red-600 hover:bg-red-700"
                     : isLoading
-                    ? "bg-yellow-500"
-                    : "bg-green-600 hover:bg-green-700"
+                      ? "bg-yellow-500"
+                      : "bg-green-600 hover:bg-green-700"
                 }`}
                 disabled={isLoading}
                 title={isAssistantOn ? "Disconnect" : "Connect"}
@@ -1090,16 +1117,16 @@ const VoiceWidget = () => {
                     !stream
                       ? "bg-gray-400 text-gray-200 cursor-not-allowed"
                       : isMicMuted
-                      ? "bg-red-600 text-white hover:bg-red-700"
-                      : "bg-blue-600 text-white hover:bg-blue-700"
+                        ? "bg-red-600 text-white hover:bg-red-700"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
                   }`}
                   disabled={!stream}
                   title={
                     !stream
                       ? "Microphone unavailable"
                       : isMicMuted
-                      ? "Unmute Microphone"
-                      : "Mute Microphone"
+                        ? "Unmute Microphone"
+                        : "Mute Microphone"
                   }
                 >
                   {isMicMuted ? (
